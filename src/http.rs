@@ -126,6 +126,9 @@ impl Response {
 
     pub fn write_to(&self, writer: &mut impl Write) -> io::Result<()> {
         let mut head = format!("HTTP/1.1 {} {}\r\n", self.status, self.reason);
+
+        head.push_str("Strict-Transport-Security: max-age=300\r\n");
+
         if self.connection_close {
             head.push_str("Connection: close\r\n");
         }
