@@ -38,8 +38,6 @@ fn handle_client(stream: TcpStream) -> std::io::Result<()> {
         count += 1;
         let keep_alive = request.is_keep_alive() && count < MAX_REQUESTS_PER_CONN;
 
-        println!("{} {}", request.method, request.path);
-
         let mut response = catch_unwind(AssertUnwindSafe(|| serve(&request)))
             .unwrap_or_else(|_| Response::error(500, "Internal Server Error"));
 
@@ -66,11 +64,16 @@ fn serve(request: &Request) -> Response {
     if request.method != "GET" {
         return Response::error(405, "Method Not Allowed");
     }
+    let raw_path = request
+        .path
+        .split_once('?')
+        .map(|(p, _)| p)
+        .unwrap_or(&request.path);
 
-    let path = if request.path == "/" {
+    let path = if raw_path == "/" {
         "/index.html"
     } else {
-        request.path.as_str()
+        raw_path
     };
 
     if path.contains("..") {
@@ -105,7 +108,6 @@ fn main() -> std::io::Result<()> {
     let config = Config::load();
 
     let listener = TcpListener::bind(&config.addr)?;
-    println!("listening on {}", listener.local_addr()?);
 
     let pool = ThreadPool::new(config.workers);
 

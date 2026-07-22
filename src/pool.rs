@@ -46,7 +46,6 @@ impl ThreadPool {
 impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Self {
         let handle = thread::spawn(move || {
-            println!("worker {id} up");
             loop {
                 let job = receiver.lock().unwrap().recv();
                 match job {
@@ -58,7 +57,6 @@ impl Worker {
                     Err(_) => break,
                 }
             }
-            println!("worker {id} down");
         });
 
         Worker {
@@ -73,7 +71,6 @@ impl Drop for ThreadPool {
         drop(self.sender.take());
 
         for worker in &mut self.workers {
-            println!("shutting down worker {}", worker.id);
             if let Some(handle) = worker.handle.take() {
                 if handle.join().is_err() {
                     eprintln!("worker {} panicked", worker.id);
