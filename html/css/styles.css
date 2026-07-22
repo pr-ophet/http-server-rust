@@ -24,7 +24,7 @@ body {
 }
 
 main {
-    max-width: 40rem;
+    max-width: 80rem;
 }
 
 .accent {
@@ -32,7 +32,7 @@ main {
 }
 
 .header {
-    font-size: 2.3rem;
+    font-size: 4rem;
     font-weight: 600;
     margin-bottom: 0.75rem;
 }
@@ -55,7 +55,7 @@ main {
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 0.9rem 1.1rem;
+    padding: 1.5rem 1.7rem;
     text-decoration: none;
     color: inherit;
     transition: border-color 0.15s ease, transform 0.15s ease;
@@ -79,17 +79,18 @@ main {
 .card .title {
     font-weight: 600;
     margin-bottom: 0.15rem;
+    font-size: 1.5rem;
 }
 
 .card .description {
     color: var(--text-secondary);
-    font-size: 0.85rem;
+    font-size: 1.2rem;
     line-height: 1.5;
 }
 
 footer {
     margin-top: 2rem;
-    padding-top: 1.5rem;
+    padding-top: 1.2rem;
     border-top: 1px solid var(--border);
     font-size: 1rem;
     line-height: 1.6;
@@ -103,4 +104,19 @@ footer .footer-link {
 
 footer .footer-link:hover {
     color: var(--accent);
+}
+
+@media screen and (max-width: 1100px) {
+    .header {
+        font-size: 2.5rem;
+    }
+}
+
+@media screen and (max-width: 700px) {
+    main {
+        max-width: 20rem;
+    }
+    .header {
+        font-size: 1.7rem;
+    }
 }

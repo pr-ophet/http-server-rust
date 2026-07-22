@@ -6,14 +6,17 @@ use std::io::{self, BufRead, Write};
 pub struct Request {
     pub method: String,
     pub path: String,
+    pub version: String,
     pub headers: HashMap<String, String>,
 }
 
 impl Request {
     pub fn is_keep_alive(&self) -> bool {
-        !self
-            .header("connection")
-            .is_some_and(|v| v.eq_ignore_ascii_case("close"))
+        match self.header("connection") {
+            Some(v) if v.eq_ignore_ascii_case("close") => false,
+            Some(v) if v.eq_ignore_ascii_case("keep-alive") => true,
+            _ => self.version != "HTTP/1.0",
+        }
     }
 
     pub fn header(&self, name: &str) -> Option<&str> {
@@ -54,6 +57,7 @@ pub fn parse_request(reader: impl BufRead) -> Result<Request, ParseError> {
     let mut parts = request_line.split_whitespace();
     let method = parts.next().ok_or(ParseError::BadRequest)?.to_string();
     let path = parts.next().ok_or(ParseError::BadRequest)?.to_string();
+    let version = parts.next().unwrap_or("HTTP/1.0").to_string();
 
     let mut headers = HashMap::new();
     for line in lines {
@@ -74,6 +78,7 @@ pub fn parse_request(reader: impl BufRead) -> Result<Request, ParseError> {
     Ok(Request {
         method,
         path,
+        version,
         headers,
     })
 }
