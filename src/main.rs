@@ -43,6 +43,13 @@ fn load_key(path: &str) -> PrivateKeyDer<'static> {
 }
 
 fn serve_tls(tcp: TcpStream, config: Arc<ServerConfig>) -> std::io::Result<()> {
+    let mut first = [0u8; 1];
+    match tcp.peek(&mut first)? {
+        0 => return Ok(()),
+        _ if first[0] != 0x16 => return redirect_to_https(tcp, 8443),
+        _ => {}
+    }
+
     let conn =
         ServerConnection::new(config).map_err(|e| std::io::Error::new(ErrorKind::Other, e))?;
     let tls = StreamOwned::new(conn, tcp);
