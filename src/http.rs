@@ -10,6 +10,12 @@ pub struct Request {
 }
 
 impl Request {
+    pub fn is_keep_alive(&self) -> bool {
+        !self
+            .header("connection")
+            .is_some_and(|v| v.eq_ignore_ascii_case("close"))
+    }
+
     pub fn header(&self, name: &str) -> Option<&str> {
         self.headers.get(&name.to_lowercase()).map(String::as_str)
     }
@@ -18,7 +24,7 @@ impl Request {
 #[derive(Debug)]
 pub enum ParseError {
     Empty,
-    BadRequestLine,
+    BadRequest,
     BadHeader,
     Io(io::Error),
 }
@@ -27,7 +33,7 @@ impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ParseError::Empty => write!(f, "empty request"),
-            ParseError::BadRequestLine => write!(f, "malformed request line"),
+            ParseError::BadRequest => write!(f, "malformed request"),
             ParseError::BadHeader => write!(f, "malformed header"),
             ParseError::Io(e) => write!(f, "i/o error: {e}"),
         }
@@ -46,8 +52,8 @@ pub fn parse_request(reader: impl BufRead) -> Result<Request, ParseError> {
     let request_line = lines.next().ok_or(ParseError::Empty)??;
 
     let mut parts = request_line.split_whitespace();
-    let method = parts.next().ok_or(ParseError::BadRequestLine)?.to_string();
-    let path = parts.next().ok_or(ParseError::BadRequestLine)?.to_string();
+    let method = parts.next().ok_or(ParseError::BadRequest)?.to_string();
+    let path = parts.next().ok_or(ParseError::BadRequest)?.to_string();
 
     let mut headers = HashMap::new();
     for line in lines {
@@ -77,35 +83,54 @@ pub struct Response {
     reason: &'static str,
     content_type: &'static str,
     body: Vec<u8>,
+    connection_close: bool,
 }
 
 impl Response {
-    pub fn ok(content_type: &'static str, body: Vec<u8>) -> Self {
-        Response {
-            status: 200,
-            reason: "OK",
-            content_type,
-            body,
-        }
+    pub fn set_close(&mut self) {
+        self.connection_close = true;
     }
 
-    pub fn error(status: u16, reason: &'static str) -> Self {
+    pub fn new(
+        status: u16,
+        reason: &'static str,
+        content_type: &'static str,
+        body: Vec<u8>,
+    ) -> Self {
         Response {
             status,
             reason,
-            content_type: "text/html",
-            body: format!("<h1>{status} {reason}</h1>").into_bytes(),
+            content_type,
+            body,
+            connection_close: false,
         }
     }
 
+    pub fn ok(content_type: &'static str, body: Vec<u8>) -> Self {
+        Response::new(200, "OK", content_type, body)
+    }
+
+    pub fn error(status: u16, reason: &'static str) -> Self {
+        Response::new(
+            status,
+            reason,
+            "text/html",
+            format!("<h1>{status} {reason}</h1>").into_bytes(),
+        )
+    }
+
     pub fn write_to(&self, writer: &mut impl Write) -> io::Result<()> {
-        let head = format!(
-            "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n",
-            self.status,
-            self.reason,
+        let mut head = format!("HTTP/1.1 {} {}\r\n", self.status, self.reason);
+        if self.connection_close {
+            head.push_str("Connection: close\r\n");
+        }
+
+        head.push_str(&format!(
+            "Content-Type: {}\r\nContent-Length: {}\r\n\r\n",
             self.content_type,
             self.body.len()
-        );
+        ));
+
         writer.write_all(head.as_bytes())?;
         writer.write_all(&self.body)
     }

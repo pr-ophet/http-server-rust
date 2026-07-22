@@ -3,7 +3,7 @@ mod http;
 mod pool;
 
 use config::Config;
-use http::{Request, Response};
+use http::{ParseError, Request, Response};
 use pool::ThreadPool;
 use std::fs;
 use std::io::BufReader;
@@ -12,31 +12,54 @@ use std::net::{TcpListener, TcpStream};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::Duration;
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
+const MAX_REQUESTS_PER_CONN: usize = 100;
 
-fn handle_client(mut stream: TcpStream) -> std::io::Result<()> {
+fn handle_client(stream: TcpStream) -> std::io::Result<()> {
     stream.set_read_timeout(Some(READ_TIMEOUT))?;
+    let mut reader = BufReader::new(&stream);
+    let mut count = 0usize;
 
-    let reader = BufReader::new(&mut stream);
-    let response = match http::parse_request(reader) {
-        Ok(request) => {
-            println!(
-                "{} {} ({})",
-                request.method,
-                request.path,
-                request.header("user-agent").unwrap_or("-")
-            );
-            catch_unwind(AssertUnwindSafe(|| serve(&request))).unwrap_or_else(|_| {
-                eprintln!("handler panicked on {} {}", request.method, request.path);
-                Response::error(500, "Internal Server Error")
-            })
-        }
-        Err(e) => {
-            eprintln!("bad request: {e}");
-            Response::error(400, "Bad Request")
-        }
-    };
+    loop {
+        let request = match http::parse_request(&mut reader) {
+            Ok(request) => request,
+            Err(ParseError::Empty) => return Ok(()),
+            Err(ParseError::Io(e))
+                if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) =>
+            {
+                return Ok(());
+            }
+            Err(e) => {
+                eprintln!("bad request: {e}");
+                Response::error(400, "Bad Request").write_to(&mut (&stream))?;
+                return Ok(());
+            }
+        };
 
-    response.write_to(&mut stream)
+        count += 1;
+        let keep_alive = request.is_keep_alive() && count < MAX_REQUESTS_PER_CONN;
+
+        println!("{} {}", request.method, request.path);
+
+        let mut response = catch_unwind(AssertUnwindSafe(|| serve(&request)))
+            .unwrap_or_else(|_| Response::error(500, "Internal Server Error"));
+
+        if !keep_alive {
+            response.set_close();
+        }
+
+        response.write_to(&mut (&stream))?;
+
+        if !keep_alive {
+            return Ok(());
+        }
+    }
+}
+
+fn not_found() -> Response {
+    match fs::read("html/404.html") {
+        Ok(body) => Response::new(404, "Not Found", "text/html", body),
+        Err(_) => Response::error(404, "Not Found"),
+    }
 }
 
 fn serve(request: &Request) -> Response {
@@ -51,15 +74,13 @@ fn serve(request: &Request) -> Response {
     };
 
     if path.contains("..") {
-        return Response::error(404, "Not Found");
+        return not_found();
     }
 
     let file_path = format!("html{path}");
     match fs::read(&file_path) {
         Ok(body) => Response::ok(content_type_for(path), body),
-        Err(e) if matches!(e.kind(), ErrorKind::NotFound | ErrorKind::IsADirectory) => {
-            Response::error(404, "Not Found")
-        }
+        Err(e) if matches!(e.kind(), ErrorKind::NotFound | ErrorKind::IsADirectory) => not_found(),
         Err(e) => {
             eprintln!("error reading {file_path}: {e}");
             Response::error(500, "Internal Server Error")

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 Not Found</title>
+  <style>
+    :root {
+      --bg: #101418;
+      --accent: #e8927c;
+      --card-bg: #171d24;
+      --border: #262e38;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: ui-monospace, Consolas, monospace;
+    }
+    body {
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    main {
+      max-width: 34rem;
+    }
+    .code {
+      font-size: 4.5rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    a.home {
+      display: inline-block;
+      color: var(--accent);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.7rem 1.5rem;
+      text-decoration: none;
+      transition: border-color 0.15s ease;
+    }
+    a.home:hover {
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="code">404</div>
+    <a class="home" href="/">Back home</a>
+  </main>
+</body>
+</html>
