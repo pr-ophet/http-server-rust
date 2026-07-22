@@ -1,0 +1,106 @@
+:root {
+    --bg: #101418;
+    --text: #e6e1d7;
+    --text-secondary: #8a94a0;
+    --accent: #e8927c;
+    --card-bg: #171d24;
+    --border: #262e38;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: ui-monospace, Consolas, monospace;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+main {
+    max-width: 37rem;
+}
+
+.accent {
+    color: var(--accent);
+}
+
+.header {
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 2.5rem;
+    line-height: 1.5;
+}
+
+.cards {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.card svg {
+    flex-shrink: 0;
+    fill: var(--text-secondary);
+    transition: fill 0.15s ease;
+}
+
+.card:hover svg {
+    fill: var(--accent);
+}
+
+.card .title {
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+}
+
+.card .description {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+footer {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+footer .footer-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+footer .footer-link:hover {
+    color: var(--accent);
+}
